@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "main": "api/slackbot.js",
   "scripts": {
-    "dev": "vercel dev", 
-    "start": "node api/slackbot.js" 
+    "dev": "vercel dev",
+    "start": "node api/slackbot.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@slack/bolt": "^3.22.0",
     "@slack/web-api": "^7.6.0",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
