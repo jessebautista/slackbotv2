@@ -2,7 +2,7 @@ const { App } = require('@slack/bolt');
 const axios = require('axios');
 require('dotenv').config();
 
-// Initialize the Bolt App (no receiver, as we'll handle events manually)
+// Initialize the Bolt App
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,  // Slack bot token
   signingSecret: process.env.SLACK_SIGNING_SECRET,  // Slack signing secret
@@ -46,9 +46,17 @@ app.message(async ({ message, say }) => {
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
-      // Process the event from Slack
-      await app.processEvent(req.body);
-      res.status(200).send('Event processed');
+      // Ensure the body is correctly parsed
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
+      // Check if the request contains the 'event' key and process it
+      if (body && body.event) {
+        await app.processEvent(body);  // Process the entire event body
+        res.status(200).send('Event processed');
+      } else {
+        console.error('No event in request body');
+        res.status(400).send('Bad request: No event in body');
+      }
     } catch (error) {
       console.error('Error processing event:', error);
       res.status(500).send('Error processing event');
