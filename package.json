@@ -1,0 +1,19 @@
+{
+  "name": "slackbotv2",
+  "version": "1.0.0",
+  "main": "api/slackbot.js",
+  "scripts": {
+    "dev": "vercel dev", 
+    "start": "node api/slackbot.js" 
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@slack/web-api": "^7.6.0",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
+  }
+}
