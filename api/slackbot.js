@@ -81,6 +81,9 @@ module.exports = async (req, res) => {
 
     console.log('Message sent to Slack');
   } catch (error) {
-    console.error('Error while communicating with OpenAI or Slack:', error.message);
+    console.error('Error while communicating with OpenAI:', error.message);
+    if (error.response) {
+        console.error('Error details:', error.response.data);  // Log detailed error response
+    }
   }
 };
