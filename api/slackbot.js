@@ -1,17 +1,23 @@
 // Import necessary packages
-const { App } = require('@slack/bolt');
+const { App, ExpressReceiver } = require('@slack/bolt');
 const axios = require('axios');
 require('dotenv').config();
 
-const openAiApiKey = process.env.OPENAI_API_KEY;
-
-// Initialize Bolt App using Vercel's serverless structure
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,  // Slack bot token
-  signingSecret: process.env.SLACK_SIGNING_SECRET,  // Slack signing secret
+// Create a custom receiver
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
 
-// Main event handler for messages
+// Initialize Bolt App
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver: receiver,
+});
+
+// OpenAI API Key
+const openAiApiKey = process.env.OPENAI_API_KEY;
+
+// Message event handler
 app.message(async ({ message, say }) => {
   try {
     // Construct the OpenAI prompt
@@ -24,7 +30,7 @@ app.message(async ({ message, say }) => {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-3.5-turbo',
       messages: preprompt,
-      max_tokens: 50,  // Limit the response size
+      max_tokens: 50,
     }, {
       headers: {
         Authorization: `Bearer ${openAiApiKey}`,
@@ -42,8 +48,5 @@ app.message(async ({ message, say }) => {
   }
 });
 
-// Expose the app through Vercel's serverless function
-module.exports = async (req, res) => {
-  await app.start();
-  res.status(200).send('Bot is running.');
-};
+// Export as a Vercel-compatible serverless function
+module.exports = receiver.router;
