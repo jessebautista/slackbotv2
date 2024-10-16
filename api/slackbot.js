@@ -1,17 +1,11 @@
-// Import necessary packages
-const { App, ExpressReceiver } = require('@slack/bolt');
+const { App } = require('@slack/bolt');
 const axios = require('axios');
 require('dotenv').config();
 
-// Create a custom receiver
-const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-});
-
-// Initialize Bolt App
+// Initialize the Bolt App (no receiver, as we'll handle events manually)
 const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
-  receiver: receiver,
+  token: process.env.SLACK_BOT_TOKEN,  // Slack bot token
+  signingSecret: process.env.SLACK_SIGNING_SECRET,  // Slack signing secret
 });
 
 // OpenAI API Key
@@ -48,5 +42,18 @@ app.message(async ({ message, say }) => {
   }
 });
 
-// Export as a Vercel-compatible serverless function
-module.exports = receiver.router;
+// Vercel Serverless Function Handler
+module.exports = async (req, res) => {
+  if (req.method === 'POST') {
+    try {
+      // Process the event from Slack
+      await app.processEvent(req.body);
+      res.status(200).send('Event processed');
+    } catch (error) {
+      console.error('Error processing event:', error);
+      res.status(500).send('Error processing event');
+    }
+  } else {
+    res.status(405).send({ message: 'Only POST requests allowed' });
+  }
+};
