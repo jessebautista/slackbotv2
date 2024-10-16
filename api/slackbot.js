@@ -18,10 +18,13 @@ function delayResponse(messageLength) {
 
 // Vercel Serverless function handler
 module.exports = async (req, res) => {
-  // Handle Slack's challenge verification request
-  if (req.body.type === 'url_verification') {
-    return res.status(200).json({ challenge: req.body.challenge });
-  }
+    console.log('Incoming request:', req.body);  // Log the incoming request body
+    
+    // Handle Slack's challenge verification request
+    if (req.body.type === 'url_verification') {
+      console.log('Handling challenge verification');
+      return res.status(200).json({ challenge: req.body.challenge });
+    }
 
   const { event } = req.body;
 
