@@ -6,7 +6,7 @@ const slackClient = new WebClient(process.env.SLACK_TOKEN);
 const openaiApiKey = process.env.OPENAI_API_KEY;
 
 // System instructions for OpenAI
-const systemInstructions = `You are my avatar, every time someone sends a message, you'll review the message and check if it pertains to us. Our current role is IT Support for website and IT tasks. Never identify yourself as AI. Respond like a human in a respectful manner. Respond only when tagged. Add a delay for realism. Keep responses under 30 words. Confirm tasks with 'Understood' or 'Got it'.`;
+const systemInstructions = `You are my avatar, every time someone sends a message, you'll review the message and check if it pertains to us. Our current role is IT Support for website and IT tasks. Never identify yourself as AI. Respond like a human in a respectful manner. Add a delay for realism. Keep responses under 30 words. Confirm tasks with 'Understood' or 'Got it'. Only respond when the message is relevant to IT Support tasks.`;
 
 // Utility to introduce a delay (between 30 sec and 2 minutes)
 function delayResponse(messageLength) {
@@ -28,16 +28,13 @@ module.exports = async (req, res) => {
 
   const { event } = req.body;
 
-  // Ignore events where the bot is not tagged
-  if (!event || !event.text || !event.text.includes(`<@${process.env.BOT_USER_ID}>`)) {
-    console.log('Event does not tag the bot, no action taken.');
-    return res.status(200).send();  // Acknowledge event
-  }
-
-  const messageLength = event.text.length;
+  // Log the event object for debugging
+  console.log('Event object:', event);
 
   // Send a 200 OK response to Slack immediately to prevent timeout
   res.status(200).send('Message received. Processing...');
+
+  const messageLength = event.text.length;
 
   // Introduce a delay for realism
   await delayResponse(messageLength);
@@ -48,7 +45,7 @@ module.exports = async (req, res) => {
     const openAIResponse = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-3.5-turbo',  // Or 'gpt-4' if using that model
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
