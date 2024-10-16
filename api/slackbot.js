@@ -5,82 +5,82 @@ require('dotenv').config();
 const slackClient = new WebClient(process.env.SLACK_TOKEN);
 const openaiApiKey = process.env.OPENAI_API_KEY;
 
-// System instructions for OpenAI
-const systemInstructions = `You are my avatar, every time someone sends a message, you'll review the message and check if it pertains to us. Our current role is IT Support for website and IT tasks. Never identify yourself as AI. Respond like a human in a respectful manner. Add a delay for realism. Keep responses under 30 words. Confirm tasks with 'Understood' or 'Got it'. Only respond when the message is relevant to IT Support tasks.`;
+let lastRequestTime = 0;  // Track last request time for rate limiting
 
-// Utility to introduce a delay (between 30 sec and 2 minutes)
-function delayResponse(messageLength) {
-  return new Promise(resolve => {
-    const delay = Math.min(120, Math.max(30, messageLength / 2)); // 30 sec to 2 min
-    setTimeout(resolve, delay * 1000);
-  });
+// Function to delay between requests
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Vercel Serverless function handler
-module.exports = async (req, res) => {
-  console.log('Incoming request:', req.body);  // Log incoming request for debugging
+// Function to get OpenAI response with rate limiting
+async function getOpenAIResponse(prompt) {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
 
-  // Handle Slack's challenge verification request
-  if (req.body.type === 'url_verification') {
-    console.log('Handling challenge verification');
-    return res.status(200).json({ challenge: req.body.challenge });
+  if (timeSinceLastRequest < 10000) {
+    await delay(10000 - timeSinceLastRequest);  // Wait the remaining time if requests are too frequent
   }
 
-  const { event } = req.body;
-
-  // Log the event object for debugging
-  console.log('Event object:', event);
-
-  // Send a 200 OK response to Slack immediately to prevent timeout
-  res.status(200).send('Message received. Processing...');
-
-  const messageLength = event.text.length;
-
-  // Introduce a delay for realism
-  await delayResponse(messageLength);
-
-  // Continue processing the OpenAI response asynchronously
   try {
-    console.log('Sending request to OpenAI');
-    const openAIResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: systemInstructions
-          },
-          {
-            role: 'user',
-            content: event.text
-          }
-        ]
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-3.5-turbo',
+      messages: prompt,  // Pass prompt structure
+      max_tokens: 50,
+    }, {
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
       },
-      {
-        headers: {
-          Authorization: `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000  // Add a timeout to avoid long waits (10 seconds)
-      }
-    );
-
-    console.log('OpenAI response:', openAIResponse.data);
-
-    const botReply = openAIResponse.data.choices[0].message.content;
-
-    // Send the reply back to Slack asynchronously
-    await slackClient.chat.postMessage({
-      channel: event.channel,
-      text: botReply,
     });
 
-    console.log('Message sent to Slack');
+    lastRequestTime = Date.now();  // Update last request time
+    return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('Error while communicating with OpenAI:', error.message);
-    if (error.response) {
-        console.error('Error details:', error.response.data);  // Log detailed error response
+    if (error.response && error.response.status === 429) {
+      console.log('Rate limit hit. Retrying after a short wait...');
+      await delay(1000);  // Wait 1 second and retry
+      return getOpenAIResponse(prompt);
     }
+    console.error('Error fetching response from OpenAI:', error);
+    throw error;
+  }
+}
+
+// Main handler function
+module.exports = async (req, res) => {
+  if (req.method === 'POST') {
+    const { type, challenge, event } = req.body;
+
+    // Respond to Slack's URL verification challenge
+    if (type === 'url_verification') {
+      return res.status(200).send(challenge);
+    }
+
+    // Handle incoming messages
+    if (event && event.type === 'message' && !event.subtype) {
+      const { text, channel } = event;
+
+      // Prepare OpenAI prompt
+      const preprompt = [
+        { role: 'system', content: "You are an IT Support Agent. Respond only to messages related to our website or app. Ask probing questions if the task is unclear. Keep responses under 50 words." },
+        { role: 'user', content: text }
+      ];
+
+      try {
+        const reply = await getOpenAIResponse(preprompt);
+        await slackClient.chat.postMessage({ channel, text: reply });
+      } catch (error) {
+        await slackClient.chat.postMessage({
+          channel,
+          text: 'There was an error processing your request. Please try again later.'
+        });
+      }
+    }
+
+    // Respond with 200 OK for all other requests
+    res.status(200).send('OK');
+  } else {
+    res.setHeader('Allow', ['POST']);
+    res.status(405).send(`Method ${req.method} Not Allowed`);
   }
 };
