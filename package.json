@@ -13,8 +13,10 @@
   "dependencies": {
     "@slack/bolt": "^3.22.0",
     "@slack/web-api": "^7.6.0",
+    "@vercel/node": "^3.2.23",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "openai": "^4.67.3"
   }
 }
