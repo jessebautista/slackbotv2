@@ -1,22 +1,20 @@
 {
-  "name": "slackbotv2",
+  "name": "slack-openai",
   "version": "1.0.0",
-  "main": "api/slackbot.js",
+  "main": "api/slack-openai.ts",  
   "scripts": {
-    "dev": "vercel dev",
-    "start": "node api/slackbot.js"
+    "dev": "vercel dev",  
+    "start": "vercel dev" 
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@slack/bolt": "^3.22.0",
-    "@slack/web-api": "^7.6.0",
-    "@vercel/node": "^3.2.23",
-    "axios": "^1.7.7",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "openai": "^4.67.3"
+    "openai": "^4.0.0",  
+    "@slack/web-api": "^7.6.0", 
+    "dotenv": "^16.4.5",  
+    "@vercel/node": "^2.0.0", 
+    "typescript": "^5.2.0"  
   }
 }
